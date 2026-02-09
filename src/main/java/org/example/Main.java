@@ -1,7 +1,7 @@
 package org.example;
 
 import org.example.model.Store;
-import org.example.services.HomeServices;
+import org.example.services.HomeService;
 
 import java.util.List;
 
@@ -13,7 +13,7 @@ public class Main {
 
         List<Store> stores = List.of(s1,s2,s3);
 
-        HomeServices service = new HomeServices();
+        HomeService service = new HomeService();
 
         List<Store> result =
                 service.filterStores(stores,"02:00");

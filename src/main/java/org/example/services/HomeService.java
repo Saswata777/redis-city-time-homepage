@@ -2,10 +2,13 @@ package org.example.services;
 
 import org.example.model.Store;
 import org.example.util.TimeUtil;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-public class HomeServices {
+
+@Service
+public class HomeService {
     public List<Store> filterStores(List<Store> stores, String time) {
 
         return stores.stream()
