@@ -20,7 +20,9 @@ public class RedisStoreService {
 
         List<Store> stores = new ArrayList<>();
 
-        assert storeIds != null;
+        if (storeIds == null || storeIds.isEmpty()) {
+            return List.of();
+        }
         for(String id : storeIds) {
 
             Map<Object, Object> meta =

@@ -25,38 +25,84 @@ public class HomeService {
 
     public List<Store> getHomePage(String city, String time) {
 
-        // Step 1: Create Time Bucket
+        city = city.toLowerCase();
+
         String bucket = TimeBucketUtil.getBucket(time);
+        String key = RedisKeys.homeCache(city, bucket);
+        String lockKey = "lock:" + key;
 
-        // Step 2: Generate Redis Key
-        String key = RedisKeys.homeCache(city.toLowerCase(), bucket);
-
-        // Step 3: Check Cache
+        // 1️⃣ Check Cache
         String cached = redisTemplate.opsForValue().get(key);
-
         if (cached != null) {
-            System.out.println(" CACHE HIT");
+            System.out.println("CACHE HIT");
             return JsonUtil.fromJsonList(cached, Store.class);
         }
 
-        System.out.println(" CACHE MISS");
+        System.out.println("CACHE MISS");
 
-        // Step 4: Fetch All Stores
-        List<Store> stores = redisStoreService.getStoresByCity(city);
+        try {
+            // 2️⃣ Try acquiring lock
+            Boolean isLocked = redisTemplate.opsForValue()
+                    .setIfAbsent(lockKey, "1", Duration.ofSeconds(5));
 
-        //  Step 5: Filter + Sort (your existing logic)
-        List<Store> result = stores.stream()
-                .filter(s -> TimeUtil.isStoreOpen(
-                        s.getOpenTime(),
-                        s.getCloseTime(),
-                        time))
-                .sorted((a, b) -> Integer.compare(b.getPriority(), a.getPriority()))
-                .toList();
+            if (isLocked != null && isLocked) {
 
-        //  Step 6: Store in Redis (with TTL)
-        redisTemplate.opsForValue()
-                .set(key, JsonUtil.toJson(result), Duration.ofMinutes(5));
+                try {
+                    // 3️⃣ DOUBLE CHECK (important)
+                    cached = redisTemplate.opsForValue().get(key);
+                    if (cached != null) {
+                        return JsonUtil.fromJsonList(cached, Store.class);
+                    }
 
-        return result;
+                    // 4️⃣ Fetch from Redis
+                    List<Store> stores = redisStoreService.getStoresByCity(city);
+
+                    // 5️⃣ Filter + Sort
+                    List<Store> result = stores.stream()
+                            .filter(s -> TimeUtil.isStoreOpen(
+                                    s.getOpenTime(),
+                                    s.getCloseTime(),
+                                    time))
+                            .sorted((a, b) -> Integer.compare(b.getPriority(), a.getPriority()))
+                            .toList();
+
+                    // 6️⃣ Cache result
+                    redisTemplate.opsForValue()
+                            .set(key, JsonUtil.toJson(result), Duration.ofMinutes(5));
+
+                    return result;
+
+                } finally {
+                    // 7️⃣ Always release lock
+                    redisTemplate.delete(lockKey);
+                }
+
+            } else {
+                // Wait and retry (avoid recursion explosion)
+                Thread.sleep(50);
+
+                String retryCache = redisTemplate.opsForValue().get(key);
+                if (retryCache != null) {
+                    return JsonUtil.fromJsonList(retryCache, Store.class);
+                }
+
+                // fallback (last attempt)
+                return redisStoreService.getStoresByCity(city);
+            }
+
+        } catch (Exception e) {
+            System.out.println("Redis failure, fallback triggered");
+
+            // fallback logic
+            List<Store> stores = redisStoreService.getStoresByCity(city);
+
+            return stores.stream()
+                    .filter(s -> TimeUtil.isStoreOpen(
+                            s.getOpenTime(),
+                            s.getCloseTime(),
+                            time))
+                    .sorted((a, b) -> Integer.compare(b.getPriority(), a.getPriority()))
+                    .toList();
+        }
     }
 }
