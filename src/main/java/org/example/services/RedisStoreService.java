@@ -17,7 +17,7 @@ public class RedisStoreService {
 
     public List<Store> getStoresByCity(String city) {
         Set<String> storeIds = redisTemplate.opsForSet()
-                .members(RedisKeys.storeMeta(city));
+                .members(RedisKeys.cityStores(city));
 
         List<Store> stores = new ArrayList<>();
 
