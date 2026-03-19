@@ -2,6 +2,7 @@ package org.example.services;
 import java.util.*;
 
 
+import org.example.constants.RedisKeys;
 import org.example.model.Store;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,7 @@ public class RedisStoreService {
 
     public List<Store> getStoresByCity(String city) {
         Set<String> storeIds = redisTemplate.opsForSet()
-                .members("city:stores:" + city);
+                .members(RedisKeys.cityStores(city));
 
         List<Store> stores = new ArrayList<>();
 
@@ -26,10 +27,10 @@ public class RedisStoreService {
         for(String id : storeIds) {
 
             Map<Object, Object> meta =
-                    redisTemplate.opsForHash().entries("store:meta:" + id);
+                    redisTemplate.opsForHash().entries(RedisKeys.storeMeta(id));
 
             Map<Object, Object> timing =
-                    redisTemplate.opsForHash().entries("store:timing:" + id);
+                    redisTemplate.opsForHash().entries(RedisKeys.storeTiming(id));
 
             Store store = new Store(
                     id,
