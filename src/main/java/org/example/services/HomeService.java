@@ -5,8 +5,10 @@ import org.example.model.Store;
 import org.example.util.JsonUtil;
 import org.example.util.TimeBucketUtil;
 import org.example.util.TimeUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Duration;
 import java.util.List;
@@ -37,6 +39,7 @@ import java.util.List;
  * ALL Redis operations are inside one try/catch so any Redis failure
  * (including the very first cache-check GET) triggers the graceful fallback.
  */
+
 @Service
 public class HomeService {
 
@@ -44,6 +47,14 @@ public class HomeService {
     private final StringRedisTemplate redisTemplate;
     private final LocalCacheService localCacheService;
 
+    @Value("${cache.home.ttl-minutes}")
+    private int cacheTtlMinutes;
+
+    @Value("${cache.lock.ttl-seconds}")
+    private int lockTtlSeconds;
+
+
+    @Autowired
     public HomeService(RedisStoreService redisStoreService,
                        StringRedisTemplate redisTemplate,
                        LocalCacheService localCacheService) {
@@ -86,9 +97,10 @@ public class HomeService {
 
             System.out.println("CACHE MISS [" + city + ":" + bucket + "]");
 
+
             // Step 5: Acquire distributed lock
             Boolean isLocked = redisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, "1", Duration.ofSeconds(5));
+                    .setIfAbsent(lockKey, "1", Duration.ofSeconds(lockTtlSeconds));
 
             if (isLocked != null && isLocked) {
 
@@ -112,7 +124,7 @@ public class HomeService {
 
                     // Step 10: Write to Redis cache
                     redisTemplate.opsForValue()
-                            .set(key, JsonUtil.toJson(result), Duration.ofMinutes(5));
+                            .set(key, JsonUtil.toJson(result), Duration.ofMinutes(cacheTtlMinutes));
 
                     // Step 11: Write to local cache
                     if (localCacheService.isHotCity(city)) {

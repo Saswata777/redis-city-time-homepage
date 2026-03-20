@@ -1,6 +1,8 @@
 package org.example.services;
 
 import org.example.model.Store;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -71,12 +73,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class LocalCacheService {
 
-    private static final long TTL_MS = 30_000; // 30 seconds
+    @Value("${cache.local.ttl-ms}")
+    private long TTL_MS;
 
     // Cities that get local caching — high traffic only
     private static final Set<String> HOT_CITIES = Set.of("bangalore", "delhi");
 
     // Thread-safe in-process store: key → CacheEntry
+
     private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
 
     /*
