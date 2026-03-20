@@ -15,6 +15,57 @@ import java.util.List;
  * Rather than duplicate the list, we extract it here so both classes
  * read from one place — adding a store is always a single edit.
  */
+
+/*
+---------------------------------------------------
+                StoreRepository (Class)
+---------------------------------------------------
++ findAll()              : List<StoreRecord>
++ findByCity(city: String) : List<StoreRecord>
+---------------------------------------------------
+
+                <<record>> StoreRecord
+---------------------------------------------------
+- id         : String
+- name       : String
+- city       : String
+- openTime   : String
+- closeTime  : String
+- priority   : int
+---------------------------------------------------
++ id()         : String
++ name()       : String
++ city()       : String
++ openTime()   : String
++ closeTime()  : String
++ priority()   : int
+---------------------------------------------------
+
+
++----------------------+
+|   StoreRepository    |
++----------------------+
+| + findAll()          |
+| + findByCity(city)   |
++----------+-----------+
+           |
+           | uses
+           ↓
++----------------------+
+|   StoreRecord        |
+|   <<record>>         |
++----------------------+
+| id       : String    |
+| name     : String    |
+| city     : String    |
+| openTime : String    |
+| closeTime: String    |
+| priority : int       |
++----------------------+
+
+*/
+
+
 @Component
 public class StoreRepository {
 

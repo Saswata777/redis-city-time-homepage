@@ -38,6 +38,7 @@ package org.example.init;
 
 import org.example.constants.RedisKeys;
 import org.example.repository.StoreRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -52,12 +53,64 @@ import java.util.Map;
  *
  * Phase 6 change: catalogue moved to StoreRepository (shared with RedisStoreService).
  */
+
+
+/*
+---------------------------------------------------------
+                    DataSeeder (Class)
+---------------------------------------------------------
+<<Component>>
+
+- redisTemplate   : StringRedisTemplate
+- storeRepository : StoreRepository
+---------------------------------------------------------
++ DataSeeder(redisTemplate: StringRedisTemplate,
+             storeRepository: StoreRepository)
+
++ run(args: String...) : void
+---------------------------------------------------------
+
+Relationships:
+---------------------------------------------------------
+DataSeeder  -->  StoreRepository       (uses)
+DataSeeder  -->  StringRedisTemplate   (uses)
+DataSeeder  -->  RedisKeys             (uses static methods)
+DataSeeder  -->  CommandLineRunner     (implements)
+---------------------------------------------------------
+
+
+
+
+
+
+
++------------------------------+
+|        DataSeeder            |
+|      <<Component>>           |
++------------------------------+
+| - redisTemplate              |
+| - storeRepository            |
++------------------------------+
+| + run(args)                  |
++--------------+---------------+
+               |
+      ---------------------
+      |         |         |
+      ↓         ↓         ↓
+StoreRepository  RedisTemplate  RedisKeys
+
+Implements:
+CommandLineRunner
+*/
+
+
 @Component
 public class DataSeeder implements CommandLineRunner {
 
     private final StringRedisTemplate redisTemplate;
     private final StoreRepository storeRepository;
 
+    @Autowired
     public DataSeeder(StringRedisTemplate redisTemplate,
                       StoreRepository storeRepository) {
         this.redisTemplate = redisTemplate;

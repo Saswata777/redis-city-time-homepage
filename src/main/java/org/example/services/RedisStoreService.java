@@ -3,6 +3,7 @@ package org.example.services;
 import org.example.constants.RedisKeys;
 import org.example.model.Store;
 import org.example.repository.StoreRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.SessionCallback;
@@ -27,12 +28,72 @@ import java.util.*;
  *    The first request after eviction pays a small extra write cost;
  *    all subsequent requests work normally.
  */
+
+/*
+-------------------------------------------------------------------
+                    RedisStoreService (Class)
+-------------------------------------------------------------------
+<<Service>>
+
+- redisTemplate   : StringRedisTemplate
+- storeRepository : StoreRepository
+-------------------------------------------------------------------
++ RedisStoreService(redisTemplate: StringRedisTemplate,
+                    storeRepository: StoreRepository)
+
++ getStoresByCity(city: String) : List<Store>
+
+- fetchStoresViaPipeline(city: String,
+                         storeIds: List<String>) : List<Store>
+
+- reseedCity(city: String) : void
+-------------------------------------------------------------------
+
+Relationships:
+-------------------------------------------------------------------
+RedisStoreService  -->  StringRedisTemplate   (uses Redis)
+RedisStoreService  -->  StoreRepository       (fallback / rebuild)
+RedisStoreService  -->  RedisKeys             (uses static methods)
+RedisStoreService  -->  Store                 (creates objects)
+-------------------------------------------------------------------
+
+
+
+
+
+
+
++--------------------------------------+
+|        RedisStoreService             |
+|            <<Service>>               |
++--------------------------------------+
+| - redisTemplate                      |
+| - storeRepository                    |
++--------------------------------------+
+| + getStoresByCity(city)              |
+| - fetchStoresViaPipeline(...)        |
+| - reseedCity(city)                   |
++------------------+-------------------+
+                   |
+     -----------------------------------------
+     |          |           |               |
+     ↓          ↓           ↓               ↓
+ RedisTemplate  StoreRepo   RedisKeys      Store
+
+
+
+
+
+*/
+
+
 @Service
 public class RedisStoreService {
 
     private final StringRedisTemplate redisTemplate;
     private final StoreRepository storeRepository;
 
+    @Autowired
     public RedisStoreService(StringRedisTemplate redisTemplate,
                              StoreRepository storeRepository) {
         this.redisTemplate = redisTemplate;
@@ -110,14 +171,14 @@ public class RedisStoreService {
             }
 
             try {
-                stores.add(new Store(
-                        storeIds.get(i),
-                        (String) meta.get("name"),
-                        city,
-                        (String) timing.get("open"),
-                        (String) timing.get("close"),
-                        Integer.parseInt((String) meta.get("priority"))
-                ));
+                stores.add(Store.builder()
+                        .id(storeIds.get(i))
+                        .name((String) meta.get("name"))
+                        .city(city)
+                        .openTime((String) timing.get("open"))
+                        .closeTime((String) timing.get("close"))
+                        .priority(Integer.parseInt((String) meta.get("priority")))
+                        .build());
             } catch (Exception e) {
                 System.out.println("[RedisStoreService] Failed to parse store "
                         + storeIds.get(i) + ": " + e.getMessage());
